@@ -1,103 +1,287 @@
 // ======= GLOBAL CORS PROXY =====
 const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
 
+// --- Your API Keys (PASTE YOUR ACTUAL KEYS HERE after getting the code) ---
+const cloudConvertApiKey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiM2Y1NjMzOTBiYWY3NjU0MTc5Y2VhNGNkYjk0M2FkYzFjMDE0MzAyZThhMWRjMjJhZTI1ZWJiNDZhYzIzNGQwNGRmNmU1MDg1OTI4MzhlYzciLCJpYXQiOjE3NjExMTcyOTYuOTg5MTg2LCJuYmYiOjE3NjExMTcyOTYuOTg5MTg4LCJleHAiOjQ5MTY3OTA4OTYuOTg1MTY5LCJzdWIiOiI3MzI0NzAzNCIsInNjb3BlcyI6WyJ0YXNrLnJlYWQiLCJ0YXNrLndyaXRlIl19.fhsJJ2QeBkCO7CapY2eJcQM9Vq0CQHFWfOyGmy89g2t-Wchgiq0jbcVkbD6T8hcuvMV64dhP9JieZqavb53zX97AyEH1eFGM7-JpMn6m4qni6ee3KUiSrAMJESgHJsR6VK0oItddyfRil0uKdW1Ioi6geU2smvLbYVaWEZLsjnQusheJYFAszIUZQu2NLoxYx-40K2Kaj0F8GrdxlPcFbSQUtC1qOcjDhAyRSgbWH1pjGtJSve_DyflnZtD6plCCyEG0DgShpLmGlqobu5AKBrNAfbCTkYraz8EwZYKH6kD8c3q7a7HubflPDGmRuto8itUVH7tgvrVoXwM0OiQb233LO6bZGsGiX9R8SYW3T3kyMvUG44bwedY67qaAhiG-0-p6pKApbKU9QwG9ltxv7r4PAS1GLPwoOo5_k13BDYSyswBE4RiCZjvNuqKcQQXrsAxvl6cxqlkTYvk0r-6JftyZuD-shzz5QqDDKWp6LmR_OeWKQkwIi6abMWZfvfQR2h3Vg7drcwvBJR600p_eQE_xJ9JJMeGhLQ6-_b9DMUaAD78bVS_UMsbEHtHhKt2RAx40GAYlWL4UzDgNUZgFl9BCXYU6nc-laQH3NJNh2t2pCVpM3pFl6Q9Lo50sno988_suv6B4cuEulBETY-MECOV4AFAcPaVil4OwDI-MOI0';
+const ttsApiKey = '2287ae7a98da100f650b9ada0614bdcc'; // Note: This API might need to be replaced with a real one.
+
+// =========================================================================
 // ======= FILE CONVERSION (CloudConvert) =====
-const cloudConvertApiKey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...'; // Your key
-document.getElementById('convertBtn').addEventListener('click', async () => {
-    const fileInput = document.getElementById('fileInput');
-    const format = document.getElementById('convertFormat').value;
-    const status = document.getElementById('convertStatus');
-    const downloadLink = document.getElementById('downloadLink');
+// =========================================================================
 
-    if (!fileInput.files.length) return alert('Select a file!');
+// CloudConvert API V2 supports a vast range. This is a simplified mapping
+// In a real advanced app, you'd fetch supported formats from CloudConvert's API
+const CATEGORY_FORMAT_MAP = {
+    'document': {
+        name: 'Document',
+        formats: ['pdf', 'docx', 'txt', 'rtf', 'odt', 'html']
+    },
+    'image': {
+        name: 'Image',
+        formats: ['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'svg']
+    },
+    'audio': {
+        name: 'Audio',
+        formats: ['mp3', 'wav', 'ogg', 'aac', 'flac']
+    },
+    'video': {
+        name: 'Video',
+        formats: ['mp4', 'avi', 'mov', 'wmv', 'webm', 'gif'] // gif can be video output too
+    },
+    'archive': {
+        name: 'Archive',
+        formats: ['zip', 'rar', '7z', 'tar']
+    },
+    'spreadsheet': {
+        name: 'Spreadsheet',
+        formats: ['xlsx', 'xls', 'csv', 'ods']
+    },
+    // Add more categories and formats as needed
+};
 
-    status.textContent = 'Uploading and converting...';
+const fileInput = document.getElementById('fileInput');
+const sourceCategorySelect = document.getElementById('sourceCategory');
+const convertFormatSelect = document.getElementById('convertFormat');
+const convertBtn = document.getElementById('convertBtn');
+const convertStatus = document.getElementById('convertStatus');
+const downloadLink = document.getElementById('downloadLink');
+
+// Function to populate Source Category dropdown
+function populateSourceCategory() {
+    for (const key in CATEGORY_FORMAT_MAP) {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = CATEGORY_FORMAT_MAP[key].name;
+        sourceCategorySelect.appendChild(option);
+    }
+}
+
+// Function to populate Convert Format dropdown based on selected category
+function populateConvertFormats(categoryKey) {
+    convertFormatSelect.innerHTML = '<option value="">Select Format</option>'; // Reset options
+    convertFormatSelect.disabled = true;
+
+    if (categoryKey && CATEGORY_FORMAT_MAP[categoryKey]) {
+        CATEGORY_FORMAT_MAP[categoryKey].formats.forEach(format => {
+            const option = document.createElement('option');
+            option.value = format;
+            option.textContent = format.toUpperCase();
+            convertFormatSelect.appendChild(option);
+        });
+        convertFormatSelect.disabled = false;
+    }
+}
+
+// Event listener for Source Category change
+sourceCategorySelect.addEventListener('change', () => {
+    populateConvertFormats(sourceCategorySelect.value);
+});
+
+// Initial population of source category dropdown
+populateSourceCategory();
+
+
+convertBtn.addEventListener('click', async () => {
+    if (!fileInput.files.length) {
+        convertStatus.textContent = 'Error: Please select a file!';
+        return;
+    }
+    if (!sourceCategorySelect.value) {
+        convertStatus.textContent = 'Error: Please select a source category!';
+        return;
+    }
+    if (!convertFormatSelect.value) {
+        convertStatus.textContent = 'Error: Please select a target format!';
+        return;
+    }
+
+    convertStatus.textContent = 'Uploading and converting...';
     downloadLink.style.display = 'none';
+    downloadLink.href = '#'; // Clear previous download link
 
     const file = fileInput.files[0];
+    const targetFormat = convertFormatSelect.value;
+
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-        // Import file (CloudConvert API)
-        const importRes = await fetch(`${CORS_PROXY}https://api.cloudconvert.com/v2/import/upload`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${cloudConvertApiKey}`
-            },
-            body: formData
-        });
-        const importData = await importRes.json();
-        const uploadUrl = importData.data?.url;
-
-        if (!uploadUrl) throw new Error('Upload failed');
-
-        // Convert task
-        const convertRes = await fetch(`${CORS_PROXY}https://api.cloudconvert.com/v2/convert`, {
+        // --- Step 1: Request an upload URL from CloudConvert ---
+        const requestUploadRes = await fetch(`${CORS_PROXY}https://api.cloudconvert.com/v2/jobs`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${cloudConvertApiKey}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                input: uploadUrl,
-                input_format: file.name.split('.').pop(),
-                output_format: format
+                "tasks": {
+                    "upload-file": {
+                        "operation": "import/upload"
+                    },
+                    "convert-file": {
+                        "operation": "convert",
+                        "input": "upload-file", // Reference the upload task
+                        "output_format": targetFormat
+                    },
+                    "export-file": {
+                        "operation": "export/url",
+                        "input": "convert-file" // Reference the convert task
+                    }
+                }
             })
         });
-        const convertData = await convertRes.json();
-        const fileUrl = convertData.data?.output?.url;
 
-        if (!fileUrl) throw new Error('Conversion failed');
+        if (!requestUploadRes.ok) {
+            const errorBody = await requestUploadRes.json();
+            throw new Error(`CloudConvert Job Creation failed: ${errorBody.message || requestUploadRes.statusText}`);
+        }
+        const requestUploadData = await requestUploadRes.json();
+        const uploadUrl = requestUploadData.data?.tasks[0]?.result?.form?.url; // The actual URL to upload the file to
+        const jobId = requestUploadData.data?.id;
+
+        if (!uploadUrl || !jobId) throw new Error('Failed to get CloudConvert upload URL or Job ID.');
+        
+        convertStatus.textContent = 'Uploading file...';
+
+        // --- Step 2: Upload the actual file to the obtained URL ---
+        const uploadFileRes = await fetch(uploadUrl, {
+            method: 'POST',
+            body: formData // Send the FormData directly to the upload URL
+        });
+
+        if (!uploadFileRes.ok) {
+            // CloudConvert's upload endpoint doesn't always return JSON on error, sometimes just text
+            const errorText = await uploadFileRes.text(); 
+            throw new Error(`File upload to CloudConvert failed: ${uploadFileRes.status} - ${errorText}`);
+        }
+
+        convertStatus.textContent = 'File uploaded, now converting...';
+
+        // --- Step 3: Poll the job status until conversion is complete ---
+        let jobStatusData;
+        do {
+            await new Promise(r => setTimeout(r, 3000)); // Wait 3 seconds
+            const jobStatusRes = await fetch(`${CORS_PROXY}https://api.cloudconvert.com/v2/jobs/${jobId}`, {
+                headers: {
+                    'Authorization': `Bearer ${cloudConvertApiKey}`
+                }
+            });
+            if (!jobStatusRes.ok) {
+                const errorBody = await jobStatusRes.json();
+                throw new Error(`Failed to get job status: ${errorBody.message || jobStatusRes.statusText}`);
+            }
+            jobStatusData = await jobStatusRes.json();
+            convertStatus.textContent = `Conversion status: ${jobStatusData.data?.status}...`;
+
+        } while (jobStatusData.data?.status !== 'finished' && jobStatusData.data?.status !== 'error');
+
+        if (jobStatusData.data?.status === 'error') {
+            const errorMessage = jobStatusData.data?.tasks.find(t => t.status === 'error')?.message || 'Unknown conversion error.';
+            throw new Error(`CloudConvert: ${errorMessage}`);
+        }
+
+        const exportTask = jobStatusData.data?.tasks.find(t => t.operation === 'export/url' && t.status === 'finished');
+        const fileUrl = exportTask?.result?.files[0]?.url;
+
+        if (!fileUrl) throw new Error('Converted file URL not found.');
 
         downloadLink.href = fileUrl;
         downloadLink.style.display = 'block';
-        downloadLink.textContent = 'Download Converted File';
-        status.textContent = 'Conversion done!';
+        downloadLink.textContent = `Download ${file.name.split('.').slice(0, -1).join('.')}.${targetFormat}`;
+        convertStatus.textContent = 'Conversion successful!';
     } catch (err) {
-        console.error(err);
-        status.textContent = 'Error: ' + err.message;
+        console.error('File Conversion Error:', err);
+        convertStatus.textContent = 'Error: ' + err.message;
     }
 });
 
+
+// =========================================================================
 // ======= TEXT TRANSLATION =====
-document.getElementById('translateBtn').addEventListener('click', async () => {
-    const text = document.getElementById('sourceText').value;
-    const lang = document.getElementById('targetLang').value;
-    const output = document.getElementById('translatedText');
-    if (!text || !lang) return alert('Enter text and target language!');
+// =========================================================================
+
+const sourceText = document.getElementById('sourceText');
+const targetLangSelect = document.getElementById('targetLangSelect'); // Use the new select element
+const translateBtn = document.getElementById('translateBtn');
+const translatedText = document.getElementById('translatedText');
+
+translateBtn.addEventListener('click', async () => {
+    const text = sourceText.value;
+    const lang = targetLangSelect.value; // Get value from select
+    translatedText.textContent = ''; // Clear previous text
+
+    if (!text || !lang) {
+        translatedText.textContent = 'Error: Enter text and select a target language!';
+        return;
+    }
+    
+    translatedText.textContent = 'Translating...';
 
     try {
         const res = await fetch(`${CORS_PROXY}https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${lang}`);
+        if (!res.ok) { // Check if response was successful
+            throw new Error(`Translation API responded with status: ${res.status}`);
+        }
         const data = await res.json();
-        output.textContent = data.responseData.translatedText;
+        if (data.responseStatus !== 200) { // MyMemory's internal status check
+            throw new Error(`Translation API internal error: ${data.responseDetails || 'Unknown error'}`);
+        }
+        translatedText.textContent = data.responseData.translatedText;
     } catch (err) {
-        console.error(err);
-        output.textContent = 'Translation failed';
+        console.error('Text Translation Error:', err);
+        translatedText.textContent = 'Error: Translation failed. ' + err.message;
     }
 });
 
+
+// =========================================================================
 // ======= TEXT-TO-SPEECH =====
-const ttsApiKey = '2287ae7a98da100f650b9ada0614bdcc'; // Your TTS API key
-document.getElementById('speakBtn').addEventListener('click', async () => {
-    const text = document.getElementById('speechText').value;
-    const audio = document.getElementById('audioPlayer');
-    if (!text) return alert('Enter text for speech');
+// =========================================================================
+
+const speechText = document.getElementById('speechText');
+const speakBtn = document.getElementById('speakBtn');
+const audioPlayer = document.getElementById('audioPlayer');
+const speechStatus = document.getElementById('speechStatus');
+
+speakBtn.addEventListener('click', async () => {
+    const text = speechText.value;
+    speechStatus.textContent = ''; // Clear previous status
+    audioPlayer.src = ''; // Clear previous audio
+
+    if (!text) {
+        speechStatus.textContent = 'Error: Enter text for speech!';
+        return;
+    }
+
+    // --- IMPORTANT: The api.faketts.com endpoint is likely a placeholder ---
+    // You will need to replace this with a real Text-to-Speech API like:
+    // Google Cloud Text-to-Speech, Amazon Polly, IBM Watson Text to Speech, etc.
+    // Each will have its own API key, endpoint, and request/response structure.
+
+    speechStatus.textContent = 'Generating speech...';
 
     try {
-        const res = await fetch(`${CORS_PROXY}https://api.faketts.com/speak`, { // Replace with actual TTS endpoint
+        // This fetch call needs to be adapted for your chosen real TTS API
+        const res = await fetch(`${CORS_PROXY}https://api.faketts.com/speak`, { 
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${ttsApiKey}`,
+                'Authorization': `Bearer ${ttsApiKey}`, // If your chosen TTS API uses Bearer tokens
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({ text: text }) // Adjust payload as per real TTS API
         });
+
+        if (!res.ok) {
+            const errorBody = await res.text(); // TTS APIs might return plain text error or JSON
+            throw new Error(`Text-to-Speech API responded with status: ${res.status} - ${errorBody}`);
+        }
+
         const blob = await res.blob();
-        audio.src = URL.createObjectURL(blob);
-        audio.play();
+        audioPlayer.src = URL.createObjectURL(blob);
+        audioPlayer.play();
+        speechStatus.textContent = 'Playing speech!';
     } catch (err) {
-        console.error(err);
-        alert('Text-to-speech failed');
+        console.error('Text-to-Speech Error:', err);
+        speechStatus.textContent = 'Error: Text-to-speech failed. ' + err.message;
     }
 });
