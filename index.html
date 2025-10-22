@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Added for responsiveness -->
     <title>Multi-API App</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -11,32 +12,60 @@
     <!-- ===== FILE CONVERSION ===== -->
     <section>
         <h2>File Conversion</h2>
+        <label for="fileInput">Choose a file to convert:</label>
         <input type="file" id="fileInput">
-        <select id="convertFormat">
-            <option value="pdf">PDF</option>
-            <option value="docx">DOCX</option>
-            <option value="txt">TXT</option>
-        </select>
-        <button id="convertBtn">Convert</button>
-        <p id="convertStatus"></p>
-        <a id="downloadLink" style="display:none;" target="_blank">Download Converted File</a>
+
+        <div class="conversion-options">
+            <label for="sourceCategory">Convert from:</label>
+            <select id="sourceCategory">
+                <option value="">Select Category (e.g., Document, Image)</option>
+                <!-- Options will be populated by JavaScript -->
+            </select>
+
+            <label for="convertFormat">Convert to:</label>
+            <select id="convertFormat" disabled>
+                <option value="">Select Format (after choosing category)</option>
+                <!-- Options will be populated by JavaScript -->
+            </select>
+        </div>
+
+        <button id="convertBtn">Convert File</button>
+        <p id="convertStatus" class="status-message"></p>
+        <a id="downloadLink" style="display:none;" target="_blank" download>Download Converted File</a>
     </section>
 
     <!-- ===== TEXT TRANSLATION ===== -->
     <section>
         <h2>Text Translation</h2>
-        <textarea id="sourceText" placeholder="Enter text to translate"></textarea>
-        <input id="targetLang" placeholder="Target language code (e.g., es, fr)">
-        <button id="translateBtn">Translate</button>
-        <p id="translatedText"></p>
+        <label for="sourceText">Enter text to translate:</label>
+        <textarea id="sourceText" placeholder="e.g., Hello, how are you?"></textarea>
+
+        <label for="targetLangSelect">Translate to Language:</label>
+        <select id="targetLangSelect">
+            <option value="">Select Language</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="ja">Japanese</option>
+            <option value="zh">Chinese (Simplified)</option>
+            <!-- Add more common languages as needed -->
+        </select>
+        <!-- The old targetLang input will be hidden/removed for now, using the select -->
+        <input type="hidden" id="targetLang"> 
+
+        <button id="translateBtn">Translate Text</button>
+        <p id="translatedText" class="status-message"></p>
     </section>
 
     <!-- ===== TEXT-TO-SPEECH ===== -->
     <section>
         <h2>Text-to-Speech</h2>
-        <textarea id="speechText" placeholder="Enter text to speak"></textarea>
-        <button id="speakBtn">Speak</button>
+        <label for="speechText">Enter text for speech:</label>
+        <textarea id="speechText" placeholder="e.g., The quick brown fox jumps over the lazy dog."></textarea>
+        <button id="speakBtn">Speak Text</button>
         <audio id="audioPlayer" controls></audio>
+        <p id="speechStatus" class="status-message"></p> <!-- Added status for TTS -->
     </section>
 
     <script src="script.js"></script>
