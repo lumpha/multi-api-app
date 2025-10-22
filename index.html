@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multi-API App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Multi-API App</h1>
+
+    <!-- ===== FILE CONVERSION ===== -->
+    <section>
+        <h2>File Conversion</h2>
+        <input type="file" id="fileInput">
+        <select id="convertFormat">
+            <option value="pdf">PDF</option>
+            <option value="docx">DOCX</option>
+            <option value="txt">TXT</option>
+        </select>
+        <button id="convertBtn">Convert</button>
+        <p id="convertStatus"></p>
+        <a id="downloadLink" style="display:none;" target="_blank">Download Converted File</a>
+    </section>
+
+    <!-- ===== TEXT TRANSLATION ===== -->
+    <section>
+        <h2>Text Translation</h2>
+        <textarea id="sourceText" placeholder="Enter text to translate"></textarea>
+        <input id="targetLang" placeholder="Target language code (e.g., es, fr)">
+        <button id="translateBtn">Translate</button>
+        <p id="translatedText"></p>
+    </section>
+
+    <!-- ===== TEXT-TO-SPEECH ===== -->
+    <section>
+        <h2>Text-to-Speech</h2>
+        <textarea id="speechText" placeholder="Enter text to speak"></textarea>
+        <button id="speakBtn">Speak</button>
+        <audio id="audioPlayer" controls></audio>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
