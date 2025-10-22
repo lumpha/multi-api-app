@@ -2,7 +2,7 @@
 const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
 
 // --- Your API Keys (PASTE YOUR ACTUAL KEYS HERE after getting the code) ---
-const cloudConvertApiKey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiM2Y1NjMzOTBiYWY3NjU0MTc5Y2VhNGNkYjk0M2FkYzFjMDE0MzAyZThhMWRjMjJhZTI1ZWJiNDZhYzIzNGQwNGRmNmU1MDg1OTI4MzhlYzciLCJpYXQiOjE3NjExMTcyOTYuOTg5MTg2LCJuYmYiOjE3NjExMTcyOTYuOTg5MTg4LCJleHAiOjQ5MTY3OTA4OTYuOTg1MTY5LCJzdWIiOiI3MzI0NzAzNCIsInNjb3BlcyI6WyJ0YXNrLnJlYWQiLCJ0YXNrLndyaXRlIl19.fhsJJ2QeBkCO7CapY2eJcQM9Vq0CQHFWfOyGmy89g2t-Wchgiq0jbcVkbD6T8hcuvMV64dhP9JieZqavb53zX97AyEH1eFGM7-JpMn6m4qni6ee3KUiSrAMJESgHJsR6VK0oItddyfRil0uKdW1Ioi6geU2smvLbYVaWEZLsjnQusheJYFAszIUZQu2NLoxYx-40K2Kaj0F8GrdxlPcFbSQUtC1qOcjDhAyRSgbWH1pjGtJSve_DyflnZtD6plCCyEG0DgShpLmGlqobu5AKBrNAfbCTkYraz8EwZYKH6kD8c3q7a7HubflPDGmRuto8itUVH7tgvrVoXwM0OiQb233LO6bZGsGiX9R8SYW3T3kyMvUG44bwedY67qaAhiG-0-p6pKApbKU9QwG9ltxv7r4PAS1GLPwoOo5_k13BDYSyswBE4RiCZjvNuqKcQQXrsAxvl6cxqlkTYvk0r-6JftyZuD-shzz5QqDDKWp6LmR_OeWKQkwIi6abMWZfvfQR2h3Vg7drcwvBJR600p_eQE_xJ9JJMeGhLQ6-_b9DMUaAD78bVS_UMsbEHtHhKt2RAx40GAYlWL4UzDgNUZgFl9BCXYU6nc-laQH3NJNh2t2pCVpM3pFl6Q9Lo50sno988_suv6B4cuEulBETY-MECOV4AFAcPaVil4OwDI-MOI0';
+const cloudConvertApiKey = 'AUYwVhnL8dU74stWcMhg5RcUGMFdwZ30';
 const ttsApiKey = '2287ae7a98da100f650b9ada0614bdcc'; // Note: This API might need to be replaced with a real one.
 
 // =========================================================================
@@ -285,3 +285,4 @@ speakBtn.addEventListener('click', async () => {
         speechStatus.textContent = 'Error: Text-to-speech failed. ' + err.message;
     }
 });
+
