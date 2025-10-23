@@ -104,7 +104,7 @@ convertBtn.addEventListener('click', async () => {
         // Create FormData for ConvertAPI
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('secret', CONFIG.convertApiSecret);
+        formData.append('token', CONFIG.convertApiSecret);
         formData.append('format', targetFormat);
 
         showStatus(convertStatus, 'Uploading file to ConvertAPI...', 'info');
@@ -550,4 +550,5 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('2. Sign up for free account');
     console.log('3. Replace "your_convertapi_secret_here" in script.js with your actual secret key');
 });
+
 
