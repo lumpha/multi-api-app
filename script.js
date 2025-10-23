@@ -1,288 +1,552 @@
-// ======= GLOBAL CORS PROXY =====
-const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
-
-// --- Your API Keys (PASTE YOUR ACTUAL KEYS HERE after getting the code) ---
-const cloudConvertApiKey = 'AUYwVhnL8dU74stWcMhg5RcUGMFdwZ30';
-const ttsApiKey = '2287ae7a98da100f650b9ada0614bdcc'; // Note: This API might need to be replaced with a real one.
-
 // =========================================================================
-// ======= FILE CONVERSION (CloudConvert) =====
+// ======= CONFIGURATION =====
 // =========================================================================
 
-// CloudConvert API V2 supports a vast range. This is a simplified mapping
-// In a real advanced app, you'd fetch supported formats from CloudConvert's API
-const CATEGORY_FORMAT_MAP = {
-    'document': {
-        name: 'Document',
-        formats: ['pdf', 'docx', 'txt', 'rtf', 'odt', 'html']
-    },
-    'image': {
-        name: 'Image',
-        formats: ['jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'svg']
-    },
-    'audio': {
-        name: 'Audio',
-        formats: ['mp3', 'wav', 'ogg', 'aac', 'flac']
-    },
-    'video': {
-        name: 'Video',
-        formats: ['mp4', 'avi', 'mov', 'wmv', 'webm', 'gif'] // gif can be video output too
-    },
-    'archive': {
-        name: 'Archive',
-        formats: ['zip', 'rar', '7z', 'tar']
-    },
-    'spreadsheet': {
-        name: 'Spreadsheet',
-        formats: ['xlsx', 'xls', 'csv', 'ods']
-    },
-    // Add more categories and formats as needed
+// Free API Configuration
+const CONFIG = {
+    // ConvertAPI - 50 free conversions per day
+    convertApiSecret: 'your_convertapi_secret_here', // You'll need to sign up at convertapi.com
+    
+    // LibreTranslate - Free translation API
+    translateApiUrl: 'https://libretranslate.com/translate',
+    
+    // Rate limiting
+    maxFileSize: 10 * 1024 * 1024, // 10MB
+    maxTextLength: 500
 };
 
+// =========================================================================
+// ======= FILE CONVERSION (ConvertAPI) =====
+// =========================================================================
+
 const fileInput = document.getElementById('fileInput');
-const sourceCategorySelect = document.getElementById('sourceCategory');
+const fileName = document.getElementById('fileName');
 const convertFormatSelect = document.getElementById('convertFormat');
 const convertBtn = document.getElementById('convertBtn');
+const progressBar = document.getElementById('progressBar');
+const progressFill = document.getElementById('progressFill');
 const convertStatus = document.getElementById('convertStatus');
 const downloadLink = document.getElementById('downloadLink');
 
-// Function to populate Source Category dropdown
-function populateSourceCategory() {
-    for (const key in CATEGORY_FORMAT_MAP) {
-        const option = document.createElement('option');
-        option.value = key;
-        option.textContent = CATEGORY_FORMAT_MAP[key].name;
-        sourceCategorySelect.appendChild(option);
+// File input handler
+fileInput.addEventListener('change', function() {
+    if (this.files.length > 0) {
+        const file = this.files[0];
+        
+        // Check file size
+        if (file.size > CONFIG.maxFileSize) {
+            showStatus(convertStatus, `File too large. Maximum size is ${CONFIG.maxFileSize / 1024 / 1024}MB.`, 'error');
+            this.value = '';
+            fileName.textContent = '';
+            return;
+        }
+        
+        fileName.textContent = `Selected: ${file.name} (${formatFileSize(file.size)})`;
+        fileName.style.color = 'var(--accent-color)';
+        
+        // Auto-select format based on file type
+        const extension = file.name.split('.').pop().toLowerCase();
+        autoSelectFormat(extension);
+    } else {
+        fileName.textContent = '';
     }
-}
-
-// Function to populate Convert Format dropdown based on selected category
-function populateConvertFormats(categoryKey) {
-    convertFormatSelect.innerHTML = '<option value="">Select Format</option>'; // Reset options
-    convertFormatSelect.disabled = true;
-
-    if (categoryKey && CATEGORY_FORMAT_MAP[categoryKey]) {
-        CATEGORY_FORMAT_MAP[categoryKey].formats.forEach(format => {
-            const option = document.createElement('option');
-            option.value = format;
-            option.textContent = format.toUpperCase();
-            convertFormatSelect.appendChild(option);
-        });
-        convertFormatSelect.disabled = false;
-    }
-}
-
-// Event listener for Source Category change
-sourceCategorySelect.addEventListener('change', () => {
-    populateConvertFormats(sourceCategorySelect.value);
 });
 
-// Initial population of source category dropdown
-populateSourceCategory();
+function autoSelectFormat(extension) {
+    const formatMap = {
+        'jpg': 'pdf', 'jpeg': 'pdf', 'png': 'pdf', 'gif': 'pdf',
+        'pdf': 'jpg', 'doc': 'pdf', 'docx': 'pdf', 'txt': 'pdf'
+    };
+    
+    if (formatMap[extension]) {
+        convertFormatSelect.value = formatMap[extension];
+    }
+}
 
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
 
+// Convert button handler
 convertBtn.addEventListener('click', async () => {
     if (!fileInput.files.length) {
-        convertStatus.textContent = 'Error: Please select a file!';
-        return;
-    }
-    if (!sourceCategorySelect.value) {
-        convertStatus.textContent = 'Error: Please select a source category!';
-        return;
-    }
-    if (!convertFormatSelect.value) {
-        convertStatus.textContent = 'Error: Please select a target format!';
-        return;
-    }
-
-    convertStatus.textContent = 'Uploading and converting...';
-    downloadLink.style.display = 'none';
-    downloadLink.href = '#'; // Clear previous download link
-
-    const file = fileInput.files[0];
-    const targetFormat = convertFormatSelect.value;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-        // --- Step 1: Request an upload URL from CloudConvert ---
-        const requestUploadRes = await fetch(`${CORS_PROXY}https://api.cloudconvert.com/v2/jobs`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${cloudConvertApiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                "tasks": {
-                    "upload-file": {
-                        "operation": "import/upload"
-                    },
-                    "convert-file": {
-                        "operation": "convert",
-                        "input": "upload-file", // Reference the upload task
-                        "output_format": targetFormat
-                    },
-                    "export-file": {
-                        "operation": "export/url",
-                        "input": "convert-file" // Reference the convert task
-                    }
-                }
-            })
-        });
-
-        if (!requestUploadRes.ok) {
-            const errorBody = await requestUploadRes.json();
-            throw new Error(`CloudConvert Job Creation failed: ${errorBody.message || requestUploadRes.statusText}`);
-        }
-        const requestUploadData = await requestUploadRes.json();
-        const uploadUrl = requestUploadData.data?.tasks[0]?.result?.form?.url; // The actual URL to upload the file to
-        const jobId = requestUploadData.data?.id;
-
-        if (!uploadUrl || !jobId) throw new Error('Failed to get CloudConvert upload URL or Job ID.');
-        
-        convertStatus.textContent = 'Uploading file...';
-
-        // --- Step 2: Upload the actual file to the obtained URL ---
-        const uploadFileRes = await fetch(uploadUrl, {
-            method: 'POST',
-            body: formData // Send the FormData directly to the upload URL
-        });
-
-        if (!uploadFileRes.ok) {
-            // CloudConvert's upload endpoint doesn't always return JSON on error, sometimes just text
-            const errorText = await uploadFileRes.text(); 
-            throw new Error(`File upload to CloudConvert failed: ${uploadFileRes.status} - ${errorText}`);
-        }
-
-        convertStatus.textContent = 'File uploaded, now converting...';
-
-        // --- Step 3: Poll the job status until conversion is complete ---
-        let jobStatusData;
-        do {
-            await new Promise(r => setTimeout(r, 3000)); // Wait 3 seconds
-            const jobStatusRes = await fetch(`${CORS_PROXY}https://api.cloudconvert.com/v2/jobs/${jobId}`, {
-                headers: {
-                    'Authorization': `Bearer ${cloudConvertApiKey}`
-                }
-            });
-            if (!jobStatusRes.ok) {
-                const errorBody = await jobStatusRes.json();
-                throw new Error(`Failed to get job status: ${errorBody.message || jobStatusRes.statusText}`);
-            }
-            jobStatusData = await jobStatusRes.json();
-            convertStatus.textContent = `Conversion status: ${jobStatusData.data?.status}...`;
-
-        } while (jobStatusData.data?.status !== 'finished' && jobStatusData.data?.status !== 'error');
-
-        if (jobStatusData.data?.status === 'error') {
-            const errorMessage = jobStatusData.data?.tasks.find(t => t.status === 'error')?.message || 'Unknown conversion error.';
-            throw new Error(`CloudConvert: ${errorMessage}`);
-        }
-
-        const exportTask = jobStatusData.data?.tasks.find(t => t.operation === 'export/url' && t.status === 'finished');
-        const fileUrl = exportTask?.result?.files[0]?.url;
-
-        if (!fileUrl) throw new Error('Converted file URL not found.');
-
-        downloadLink.href = fileUrl;
-        downloadLink.style.display = 'block';
-        downloadLink.textContent = `Download ${file.name.split('.').slice(0, -1).join('.')}.${targetFormat}`;
-        convertStatus.textContent = 'Conversion successful!';
-    } catch (err) {
-        console.error('File Conversion Error:', err);
-        convertStatus.textContent = 'Error: ' + err.message;
-    }
-});
-
-
-// =========================================================================
-// ======= TEXT TRANSLATION =====
-// =========================================================================
-
-const sourceText = document.getElementById('sourceText');
-const targetLangSelect = document.getElementById('targetLangSelect'); // Use the new select element
-const translateBtn = document.getElementById('translateBtn');
-const translatedText = document.getElementById('translatedText');
-
-translateBtn.addEventListener('click', async () => {
-    const text = sourceText.value;
-    const lang = targetLangSelect.value; // Get value from select
-    translatedText.textContent = ''; // Clear previous text
-
-    if (!text || !lang) {
-        translatedText.textContent = 'Error: Enter text and select a target language!';
+        showStatus(convertStatus, 'Please select a file!', 'error');
         return;
     }
     
-    translatedText.textContent = 'Translating...';
-
-    try {
-        const res = await fetch(`${CORS_PROXY}https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${lang}`);
-        if (!res.ok) { // Check if response was successful
-            throw new Error(`Translation API responded with status: ${res.status}`);
-        }
-        const data = await res.json();
-        if (data.responseStatus !== 200) { // MyMemory's internal status check
-            throw new Error(`Translation API internal error: ${data.responseDetails || 'Unknown error'}`);
-        }
-        translatedText.textContent = data.responseData.translatedText;
-    } catch (err) {
-        console.error('Text Translation Error:', err);
-        translatedText.textContent = 'Error: Translation failed. ' + err.message;
-    }
-});
-
-
-// =========================================================================
-// ======= TEXT-TO-SPEECH =====
-// =========================================================================
-
-const speechText = document.getElementById('speechText');
-const speakBtn = document.getElementById('speakBtn');
-const audioPlayer = document.getElementById('audioPlayer');
-const speechStatus = document.getElementById('speechStatus');
-
-speakBtn.addEventListener('click', async () => {
-    const text = speechText.value;
-    speechStatus.textContent = ''; // Clear previous status
-    audioPlayer.src = ''; // Clear previous audio
-
-    if (!text) {
-        speechStatus.textContent = 'Error: Enter text for speech!';
+    if (!convertFormatSelect.value) {
+        showStatus(convertStatus, 'Please select a target format!', 'error');
         return;
     }
 
-    // --- IMPORTANT: The api.faketts.com endpoint is likely a placeholder ---
-    // You will need to replace this with a real Text-to-Speech API like:
-    // Google Cloud Text-to-Speech, Amazon Polly, IBM Watson Text to Speech, etc.
-    // Each will have its own API key, endpoint, and request/response structure.
+    const file = fileInput.files[0];
+    const targetFormat = convertFormatSelect.value;
+    
+    // Check if ConvertAPI secret is configured
+    if (CONFIG.convertApiSecret === 'your_convertapi_secret_here') {
+        showStatus(convertStatus, 'Please configure ConvertAPI in script.js. Get free API key at convertapi.com', 'error');
+        return;
+    }
 
-    speechStatus.textContent = 'Generating speech...';
+    showStatus(convertStatus, 'Starting conversion...', 'info');
+    progressBar.style.display = 'block';
+    progressFill.style.width = '10%';
+    downloadLink.style.display = 'none';
+    convertBtn.disabled = true;
 
     try {
-        // This fetch call needs to be adapted for your chosen real TTS API
-        const res = await fetch(`${CORS_PROXY}https://api.faketts.com/speak`, { 
+        progressFill.style.width = '30%';
+        
+        // Create FormData for ConvertAPI
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('secret', CONFIG.convertApiSecret);
+        formData.append('format', targetFormat);
+
+        showStatus(convertStatus, 'Uploading file to ConvertAPI...', 'info');
+        progressFill.style.width = '50%';
+
+        // Convert using ConvertAPI
+        const response = await fetch(`https://v2.convertapi.com/convert/${getConversionTask(file, targetFormat)}/to/${targetFormat}`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${ttsApiKey}`, // If your chosen TTS API uses Bearer tokens
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ text: text }) // Adjust payload as per real TTS API
+            body: formData
         });
 
-        if (!res.ok) {
-            const errorBody = await res.text(); // TTS APIs might return plain text error or JSON
-            throw new Error(`Text-to-Speech API responded with status: ${res.status} - ${errorBody}`);
+        if (!response.ok) {
+            throw new Error(`Conversion failed: ${response.status} ${response.statusText}`);
         }
 
-        const blob = await res.blob();
-        audioPlayer.src = URL.createObjectURL(blob);
-        audioPlayer.play();
-        speechStatus.textContent = 'Playing speech!';
+        progressFill.style.width = '80%';
+        showStatus(convertStatus, 'Processing conversion...', 'info');
+
+        const result = await response.json();
+        
+        if (result.Files && result.Files[0]) {
+            progressFill.style.width = '100%';
+            
+            // Download the converted file
+            const convertedFileUrl = result.Files[0].Url;
+            downloadLink.href = convertedFileUrl;
+            downloadLink.style.display = 'inline-flex';
+            downloadLink.textContent = `Download ${file.name.split('.')[0]}.${targetFormat}`;
+            
+            showStatus(convertStatus, 'Conversion successful!', 'success');
+        } else {
+            throw new Error('No converted file received from API');
+        }
+        
     } catch (err) {
-        console.error('Text-to-Speech Error:', err);
-        speechStatus.textContent = 'Error: Text-to-speech failed. ' + err.message;
+        console.error('File Conversion Error:', err);
+        
+        if (err.message.includes('quota')) {
+            showStatus(convertStatus, 'Daily conversion limit reached. Try again tomorrow or upgrade your plan.', 'error');
+        } else if (err.message.includes('network') || err.message.includes('fetch')) {
+            showStatus(convertStatus, 'Network error. Please check your connection and try again.', 'error');
+        } else {
+            showStatus(convertStatus, 'Conversion failed: ' + err.message, 'error');
+        }
+    } finally {
+        convertBtn.disabled = false;
+        setTimeout(() => {
+            progressBar.style.display = 'none';
+            progressFill.style.width = '0%';
+        }, 2000);
     }
 });
 
+function getConversionTask(file, targetFormat) {
+    const extension = file.name.split('.').pop().toLowerCase();
+    
+    // Map file types to ConvertAPI tasks
+    const taskMap = {
+        'image': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
+        'document': ['pdf', 'doc', 'docx', 'txt', 'rtf'],
+        'spreadsheet': ['xls', 'xlsx', 'csv']
+    };
+    
+    for (const [task, formats] of Object.entries(taskMap)) {
+        if (formats.includes(extension)) {
+            return task;
+        }
+    }
+    
+    return 'any'; // Fallback
+}
+
+// =========================================================================
+// ======= TEXT TRANSLATION (LibreTranslate) =====
+// =========================================================================
+
+const sourceText = document.getElementById('sourceText');
+const charCount = document.getElementById('charCount');
+const sourceLang = document.getElementById('sourceLang');
+const targetLangSelect = document.getElementById('targetLangSelect');
+const translateBtn = document.getElementById('translateBtn');
+const translatedText = document.getElementById('translatedText');
+
+// Character counter
+sourceText.addEventListener('input', () => {
+    const count = sourceText.value.length;
+    charCount.textContent = count;
+    
+    if (count > CONFIG.maxTextLength) {
+        charCount.style.color = '#ef4444';
+    } else {
+        charCount.style.color = 'var(--text-light)';
+    }
+});
+
+translateBtn.addEventListener('click', async () => {
+    const text = sourceText.value.trim();
+    const source = sourceLang.value;
+    const target = targetLangSelect.value;
+    
+    if (!text) {
+        translatedText.textContent = 'Please enter some text to translate.';
+        translatedText.style.color = 'var(--text-light)';
+        return;
+    }
+    
+    if (text.length > CONFIG.maxTextLength) {
+        translatedText.textContent = `Text too long. Maximum ${CONFIG.maxTextLength} characters.`;
+        translatedText.style.color = 'var(--text-light)';
+        return;
+    }
+    
+    if (!target) {
+        translatedText.textContent = 'Please select a target language.';
+        translatedText.style.color = 'var(--text-light)';
+        return;
+    }
+
+    translateBtn.disabled = true;
+    translateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Translating...';
+    translatedText.textContent = '';
+    
+    try {
+        // Use LibreTranslate API
+        const response = await fetch(CONFIG.translateApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                q: text,
+                source: source === 'auto' ? '' : source,
+                target: target,
+                format: 'text'
+            })
+        });
+
+        if (!response.ok) {
+            // If LibreTranslate is down, fall back to basic translation
+            if (response.status === 429) {
+                throw new Error('Translation service is busy. Please try again later.');
+            } else if (response.status === 500) {
+                return fallbackTranslation(text, target);
+            }
+            throw new Error(`Translation failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.translatedText) {
+            translatedText.textContent = data.translatedText;
+            translatedText.style.color = 'var(--text-dark)';
+        } else {
+            throw new Error('No translation received');
+        }
+        
+    } catch (err) {
+        console.error('Translation Error:', err);
+        
+        // Fallback to basic translation
+        fallbackTranslation(text, target);
+        
+    } finally {
+        translateBtn.disabled = false;
+        translateBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Translate Text';
+    }
+});
+
+// Basic fallback translation for common phrases
+function fallbackTranslation(text, targetLang) {
+    const basicTranslations = {
+        'hello': {
+            'es': 'hola', 'fr': 'bonjour', 'de': 'hallo', 'it': 'ciao',
+            'pt': 'olá', 'ru': 'привет', 'zh': '你好', 'ja': 'こんにちは',
+            'ko': '안녕하세요', 'ar': 'مرحبا', 'hi': 'नमस्ते', 'ur': 'ہیلو',
+            'fa': 'سلام', 'tr': 'merhaba'
+        },
+        'thank you': {
+            'es': 'gracias', 'fr': 'merci', 'de': 'danke', 'it': 'grazie',
+            'pt': 'obrigado', 'ru': 'спасибо', 'zh': '谢谢', 'ja': 'ありがとう',
+            'ko': '감사합니다', 'ar': 'شكرا', 'hi': 'धन्यवाद', 'ur': 'شکریہ',
+            'fa': 'متشکرم', 'tr': 'teşekkür ederim'
+        },
+        'how are you': {
+            'es': 'cómo estás', 'fr': 'comment allez-vous', 'de': 'wie geht es dir',
+            'it': 'come stai', 'pt': 'como você está', 'ru': 'как дела',
+            'zh': '你好吗', 'ja': 'お元気ですか', 'ko': '어떻게 지내세요',
+            'ar': 'كيف حالك', 'hi': 'आप कैसे हैं', 'ur': 'آپ کیسے ہیں',
+            'fa': 'حالتان چطور است', 'tr': 'nasılsın'
+        }
+    };
+    
+    const lowerText = text.toLowerCase();
+    
+    for (const [phrase, translations] of Object.entries(basicTranslations)) {
+        if (lowerText.includes(phrase) && translations[targetLang]) {
+            translatedText.textContent = translations[targetLang];
+            translatedText.style.color = 'var(--text-dark)';
+            translatedText.innerHTML += '<br><small style="color: var(--text-light);">Basic translation - for better results, use shorter phrases when service is busy.</small>';
+            return;
+        }
+    }
+    
+    translatedText.textContent = 'Translation service unavailable. Please try common phrases like "hello", "thank you", or try again later.';
+    translatedText.style.color = 'var(--text-light)';
+}
+
+// =========================================================================
+// ======= TEXT-TO-SPEECH (Web Speech API + ResponsiveVoice) =====
+// =========================================================================
+
+const speechText = document.getElementById('speechText');
+const voiceSelect = document.getElementById('voiceSelect');
+const speakBtn = document.getElementById('speakBtn');
+const stopBtn = document.getElementById('stopBtn');
+const speedSlider = document.getElementById('speedSlider');
+const pitchSlider = document.getElementById('pitchSlider');
+const speedValue = document.getElementById('speedValue');
+const pitchValue = document.getElementById('pitchValue');
+const speechStatus = document.getElementById('speechStatus');
+
+let speechSynth = window.speechSynthesis;
+let currentUtterance = null;
+
+// Load available voices
+function loadVoices() {
+    const voices = speechSynth.getVoices();
+    voiceSelect.innerHTML = '<option value="">Default Voice</option>';
+    
+    voices.forEach((voice, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${voice.name} (${voice.lang})`;
+        voiceSelect.appendChild(option);
+    });
+}
+
+// Load voices when they become available
+speechSynth.addEventListener('voiceschanged', loadVoices);
+loadVoices(); // Initial load
+
+// Update slider values
+speedSlider.addEventListener('input', () => {
+    speedValue.textContent = speedSlider.value;
+});
+
+pitchSlider.addEventListener('input', () => {
+    pitchValue.textContent = pitchSlider.value;
+});
+
+// Speak function
+speakBtn.addEventListener('click', () => {
+    const text = speechText.value.trim();
+    
+    if (!text) {
+        showStatus(speechStatus, 'Please enter some text to speak.', 'error');
+        return;
+    }
+
+    // Stop any current speech
+    if (speechSynth.speaking) {
+        speechSynth.cancel();
+    }
+
+    // Try Web Speech API first
+    if (speechSynth.speak) {
+        useWebSpeechAPI(text);
+    } else {
+        // Fallback to ResponsiveVoice
+        useResponsiveVoice(text);
+    }
+});
+
+function useWebSpeechAPI(text) {
+    currentUtterance = new SpeechSynthesisUtterance(text);
+    
+    // Set voice if selected
+    const selectedVoice = voiceSelect.value;
+    if (selectedVoice) {
+        const voices = speechSynth.getVoices();
+        currentUtterance.voice = voices[selectedVoice];
+    }
+    
+    // Set rate and pitch
+    currentUtterance.rate = parseFloat(speedSlider.value);
+    currentUtterance.pitch = parseFloat(pitchSlider.value);
+    
+    // Event handlers
+    currentUtterance.onstart = () => {
+        showStatus(speechStatus, 'Speaking...', 'info');
+        speakBtn.disabled = true;
+        stopBtn.disabled = false;
+    };
+    
+    currentUtterance.onend = () => {
+        showStatus(speechStatus, 'Speech completed.', 'success');
+        speakBtn.disabled = false;
+        stopBtn.disabled = true;
+    };
+    
+    currentUtterance.onerror = (event) => {
+        showStatus(speechStatus, 'Speech error, trying fallback...', 'error');
+        speakBtn.disabled = false;
+        stopBtn.disabled = true;
+        
+        // Fallback to ResponsiveVoice
+        setTimeout(() => useResponsiveVoice(text), 500);
+    };
+    
+    speechSynth.speak(currentUtterance);
+}
+
+function useResponsiveVoice(text) {
+    try {
+        responsiveVoice.speak(text, 
+            voiceSelect.value ? voiceSelect.options[voiceSelect.value].text : null,
+            {
+                rate: speedSlider.value,
+                pitch: pitchSlider.value,
+                onstart: () => {
+                    showStatus(speechStatus, 'Speaking (fallback mode)...', 'info');
+                    speakBtn.disabled = true;
+                    stopBtn.disabled = false;
+                },
+                onend: () => {
+                    showStatus(speechStatus, 'Speech completed.', 'success');
+                    speakBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+            }
+        );
+    } catch (err) {
+        showStatus(speechStatus, 'Text-to-speech not available in this browser.', 'error');
+        speakBtn.disabled = false;
+        stopBtn.disabled = true;
+    }
+}
+
+// Stop button
+stopBtn.addEventListener('click', () => {
+    if (speechSynth.speaking) {
+        speechSynth.cancel();
+    }
+    if (typeof responsiveVoice !== 'undefined') {
+        responsiveVoice.cancel();
+    }
+    showStatus(speechStatus, 'Speech stopped.', 'info');
+    speakBtn.disabled = false;
+    stopBtn.disabled = true;
+});
+
+// =========================================================================
+// ======= UTILITY FUNCTIONS =====
+// =========================================================================
+
+function showStatus(element, message, type) {
+    element.textContent = message;
+    element.className = 'status-message';
+    
+    switch (type) {
+        case 'error':
+            element.style.backgroundColor = '#fee2e2';
+            element.style.color = '#dc2626';
+            element.style.border = '1px solid #fecaca';
+            break;
+        case 'success':
+            element.style.backgroundColor = '#d1fae5';
+            element.style.color = '#065f46';
+            element.style.border = '1px solid #a7f3d0';
+            break;
+        case 'info':
+            element.style.backgroundColor = '#dbeafe';
+            element.style.color = '#1e40af';
+            element.style.border = '1px solid #bfdbfe';
+            break;
+        default:
+            element.style.backgroundColor = '#f3f4f6';
+            element.style.color = '#374151';
+            element.style.border = '1px solid #e5e7eb';
+    }
+}
+
+// Footer link functions
+function showApiInfo() {
+    alert(`Free API Information:
+
+📁 File Conversion: ConvertAPI
+• 50 free conversions per day
+• Sign up at convertapi.com for free API key
+• Various file formats supported
+
+🌐 Translation: LibreTranslate
+• Completely free translation API
+• No API key required
+• Supports 20+ languages
+
+🔊 Text-to-Speech: Web Speech API + ResponsiveVoice
+• Built into modern browsers
+• ResponsiveVoice fallback
+• No API keys needed
+
+Note: These are free services with usage limits. For heavy usage, consider upgrading.`);
+}
+
+function showUsageTips() {
+    alert(`Usage Tips:
+
+📁 File Conversion:
+• Maximum file size: 10MB
+• Supported: Images → PDF, PDF → Images, Documents
+• 50 free conversions per day
+
+🌐 Translation:
+• Keep text under 500 characters
+• Use common phrases for best results
+• Auto-detect source language available
+
+🔊 Text-to-Speech:
+• Works best in Chrome/Edge
+• Adjust speed and pitch as needed
+• Multiple voice options available
+
+💡 For best results:
+• Use supported file types
+• Keep translations concise
+• Check browser compatibility`);
+}
+
+// =========================================================================
+// ======= INITIALIZATION =====
+// =========================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    showStatus(convertStatus, 'Ready for file conversion. Configure ConvertAPI key for full functionality.', 'info');
+    showStatus(speechStatus, 'Text-to-speech ready. Enter text and click Speak.', 'info');
+    
+    // Initialize stop button as disabled
+    stopBtn.disabled = true;
+    
+    console.log('Unicon App Initialized');
+    console.log('To enable file conversion:');
+    console.log('1. Go to convertapi.com');
+    console.log('2. Sign up for free account');
+    console.log('3. Replace "your_convertapi_secret_here" in script.js with your actual secret key');
+});
