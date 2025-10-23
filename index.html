@@ -2,71 +2,185 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Added for responsiveness -->
-    <title>Unicon</title> <!-- Changed from Multi-API App to Unicon -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unicon - Free File & Text Converter</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://code.responsivevoice.org/responsivevoice.js"></script>
 </head>
 <body>
-    <h1>Unicon</h1> <!-- Changed from Multi-API App to Unicon -->
+    <div class="container">
+        <header class="app-header">
+            <div class="logo">
+                <i class="fas fa-sync-alt"></i>
+                <h1>Unicon</h1>
+            </div>
+            <p class="tagline">Free file conversion, translation, and text-to-speech</p>
+            <div class="api-status">
+                <span class="status-badge free">FREE TIER</span>
+                <span class="status-badge live">LIVE</span>
+            </div>
+        </header>
 
-    <!-- ===== FILE CONVERSION ===== -->
-    <section>
-        <h2>File Conversion</h2>
-        <label for="fileInput">Choose a file to convert:</label>
-        <input type="file" id="fileInput">
+        <!-- ===== FILE CONVERSION ===== -->
+        <section class="feature-card">
+            <div class="card-header">
+                <i class="fas fa-file-export"></i>
+                <h2>File Conversion</h2>
+                <span class="api-credit">ConvertAPI • 50 free/day</span>
+            </div>
+            <div class="card-content">
+                <div class="input-group">
+                    <label for="fileInput" class="file-label">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Choose a file to convert</span>
+                    </label>
+                    <input type="file" id="fileInput" class="file-input">
+                    <div id="fileName" class="file-name"></div>
+                </div>
 
-        <div class="conversion-options">
-            <label for="sourceCategory">Convert from:</label>
-            <select id="sourceCategory">
-                <option value="">Select Category (e.g., Document, Image)</option>
-                <!-- Options will be populated by JavaScript -->
-            </select>
+                <div class="conversion-options">
+                    <div class="option-group">
+                        <label for="convertFormat">Convert to:</label>
+                        <select id="convertFormat" class="styled-select">
+                            <option value="">Select Format</option>
+                            <option value="pdf">PDF Document</option>
+                            <option value="jpg">JPG Image</option>
+                            <option value="png">PNG Image</option>
+                            <option value="webp">WebP Image</option>
+                            <option value="txt">Text File</option>
+                            <option value="docx">Word Document</option>
+                        </select>
+                    </div>
+                </div>
 
-            <label for="convertFormat">Convert to:</label>
-            <select id="convertFormat" disabled>
-                <option value="">Select Format (after choosing category)</option>
-                <!-- Options will be populated by JavaScript -->
-            </select>
-        </div>
+                <button id="convertBtn" class="primary-btn">
+                    <i class="fas fa-cog"></i>
+                    Convert File
+                </button>
+                
+                <div class="progress-bar" id="progressBar" style="display: none;">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                
+                <div id="convertStatus" class="status-message"></div>
+                <a id="downloadLink" class="download-btn" style="display:none;" download>
+                    <i class="fas fa-download"></i>
+                    Download Converted File
+                </a>
+            </div>
+        </section>
 
-        <button id="convertBtn">Convert File</button>
-        <p id="convertStatus" class="status-message"></p>
-        <a id="downloadLink" style="display:none;" target="_blank" download>Download Converted File</a>
-    </section>
+        <!-- ===== TEXT TRANSLATION ===== -->
+        <section class="feature-card">
+            <div class="card-header">
+                <i class="fas fa-language"></i>
+                <h2>Text Translation</h2>
+                <span class="api-credit">LibreTranslate • Free</span>
+            </div>
+            <div class="card-content">
+                <div class="input-group">
+                    <label for="sourceText">Enter text to translate:</label>
+                    <textarea id="sourceText" placeholder="Type your text here (max 500 characters)..." rows="4" maxlength="500"></textarea>
+                    <div class="char-count"><span id="charCount">0</span>/500 characters</div>
+                </div>
 
-    <!-- ===== TEXT TRANSLATION ===== -->
-    <section>
-        <h2>Text Translation</h2>
-        <label for="sourceText">Enter text to translate:</label>
-        <textarea id="sourceText" placeholder="e.g., Hello, how are you?"></textarea>
+                <div class="translation-options">
+                    <div class="option-group">
+                        <label for="sourceLang">From:</label>
+                        <select id="sourceLang" class="styled-select">
+                            <option value="auto">Auto-detect</option>
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="ar">Arabic</option>
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label for="targetLangSelect">To:</label>
+                        <select id="targetLangSelect" class="styled-select">
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="it">Italian</option>
+                            <option value="pt">Portuguese</option>
+                            <option value="ru">Russian</option>
+                            <option value="zh">Chinese</option>
+                            <option value="ja">Japanese</option>
+                            <option value="ko">Korean</option>
+                            <option value="ar">Arabic</option>
+                            <option value="hi">Hindi</option>
+                            <option value="ur">Urdu</option>
+                            <option value="fa">Farsi</option>
+                            <option value="tr">Turkish</option>
+                        </select>
+                    </div>
+                </div>
 
-        <label for="targetLangSelect">Translate to Language:</label>
-        <select id="targetLangSelect">
-            <option value="">Select Language</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="it">Italian</option>
-            <option value="ja">Japanese</option>
-            <option value="zh">Chinese (Simplified)</option>
-            <!-- Add more common languages as needed -->
-        </select>
-        <!-- The old targetLang input is kept as hidden if JS relies on its ID, but select is primary -->
-        <input type="hidden" id="targetLang"> 
+                <button id="translateBtn" class="primary-btn">
+                    <i class="fas fa-exchange-alt"></i>
+                    Translate Text
+                </button>
+                
+                <div class="translation-result">
+                    <label>Translation:</label>
+                    <div id="translatedText" class="translation-output"></div>
+                </div>
+            </div>
+        </section>
 
-        <button id="translateBtn">Translate Text</button>
-        <p id="translatedText" class="status-message"></p>
-    </section>
+        <!-- ===== TEXT-TO-SPEECH ===== -->
+        <section class="feature-card">
+            <div class="card-header">
+                <i class="fas fa-volume-up"></i>
+                <h2>Text-to-Speech</h2>
+                <span class="api-credit">Browser + ResponsiveVoice • Free</span>
+            </div>
+            <div class="card-content">
+                <div class="input-group">
+                    <label for="speechText">Enter text to speak:</label>
+                    <textarea id="speechText" placeholder="Type the text you want to hear..." rows="4"></textarea>
+                </div>
 
-    <!-- ===== TEXT-TO-SPEECH ===== -->
-    <section>
-        <h2>Text-to-Speech</h2>
-        <label for="speechText">Enter text for speech:</label>
-        <textarea id="speechText" placeholder="e.g., The quick brown fox jumps over the lazy dog."></textarea>
-        <button id="speakBtn">Speak Text</button>
-        <audio id="audioPlayer" controls></audio>
-        <p id="speechStatus" class="status-message"></p> <!-- Added status for TTS -->
-    </section>
+                <div class="option-group">
+                    <label for="voiceSelect">Select Voice:</label>
+                    <select id="voiceSelect" class="styled-select">
+                        <option value="">Default Voice</option>
+                    </select>
+                </div>
+
+                <div class="tts-controls">
+                    <button id="speakBtn" class="primary-btn">
+                        <i class="fas fa-play"></i>
+                        Speak Text
+                    </button>
+                    <button id="stopBtn" class="secondary-btn">
+                        <i class="fas fa-stop"></i>
+                        Stop
+                    </button>
+                </div>
+
+                <div class="voice-settings">
+                    <label>Speed: <span id="speedValue">1.0</span></label>
+                    <input type="range" id="speedSlider" min="0.5" max="2" step="0.1" value="1.0">
+                    
+                    <label>Pitch: <span id="pitchValue">1.0</span></label>
+                    <input type="range" id="pitchSlider" min="0.5" max="2" step="0.1" value="1.0">
+                </div>
+
+                <div id="speechStatus" class="status-message"></div>
+            </div>
+        </section>
+
+        <footer class="app-footer">
+            <p><i class="fas fa-info-circle"></i> Using free-tier services. Limits may apply.</p>
+            <p class="footer-links">
+                <a href="#" onclick="showApiInfo()">API Information</a> • 
+                <a href="#" onclick="showUsageTips()">Usage Tips</a>
+            </p>
+        </footer>
+    </div>
 
     <script src="script.js"></script>
 </body>
