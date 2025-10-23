@@ -5,7 +5,7 @@
 // Free API Configuration
 const CONFIG = {
     // ConvertAPI - 50 free conversions per day
-    convertApiSecret: 'your_convertapi_secret_here', // You'll need to sign up at convertapi.com
+    convertApiSecret: 'AUYwVhnL8dU74stWcMhg5RcUGMFdwZ30', // You'll need to sign up at convertapi.com
     
     // LibreTranslate - Free translation API
     translateApiUrl: 'https://libretranslate.com/translate',
@@ -550,3 +550,4 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('2. Sign up for free account');
     console.log('3. Replace "your_convertapi_secret_here" in script.js with your actual secret key');
 });
+
